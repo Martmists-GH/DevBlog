@@ -1,0 +1,30 @@
+fun init_{{ id }}() {
+    try {
+        val containerEl = document.getElementById("container-{{ id }}") as HTMLDivElement?
+        val canvasEl = document.getElementById("canvas-{{ id }}") as HTMLCanvasElement?
+        val plotEl = document.getElementById("plot-{{ id }}") as HTMLDivElement?
+        val plotLightEl = document.getElementById("plot-{{ id }}-light") as HTMLDivElement?
+        val plotDarkEl = document.getElementById("plot-{{ id }}-dark") as HTMLDivElement?
+
+        fun plot(
+            lightTheme: OptionsMap = themeMinimal2(),
+            darkTheme: OptionsMap = flavorDarcula(),
+            block: () -> Plot
+        ) {
+            if (plotEl == null || plotLightEl == null || plotDarkEl == null) return
+            var fig = block()
+
+            var customDiv = JsFrontendUtil.createPlotDiv(fig + lightTheme)
+            plotLightEl.innerHTML = ""
+            plotLightEl.appendChild(customDiv)
+            customDiv = JsFrontendUtil.createPlotDiv(fig + darkTheme)
+            plotDarkEl.innerHTML = ""
+            plotDarkEl.appendChild(customDiv)
+
+            plotEl.classList.remove("d-none")
+        }
+        {{ content }}
+    } catch (e: Throwable) {
+        console.error("Error in snippet {{ id }}:", e)
+    }
+}

@@ -1,0 +1,7 @@
+beautifulsoup4
+frontmatter
+jinja2
+markdown
+Pygments
+python-markdown-math
+requests

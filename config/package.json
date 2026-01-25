@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@js-joda/core": "^5.6.3",
+    "@js-joda/timezone": "^2.3.0"
+  }
+}

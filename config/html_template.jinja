@@ -1,0 +1,138 @@
+{% macro brand() %}
+    My Blog
+{% endmacro %}
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ file.title }}</title>
+
+        {# Variables for customization: https://cdn.jsdelivr.net/npm/halfmoon@1.1.1/css/halfmoon-variables.css #}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/halfmoon@1.1.1/css/halfmoon-variables.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+        <link rel="stylesheet" href="/css/style.css" />
+
+        <style>{{ syntax_css }}</style>
+
+        <script type="text/javascript" src="/js/bundle.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/halfmoon@1.1.1/js/halfmoon.min.js"></script>
+        <script type="text/x-mathjax-config">
+            MathJax.Hub.Config({
+              config: ["MMLorHTML.js"],
+              jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
+              extensions: ["MathMenu.js", "MathZoom.js"]
+            });
+        </script>
+    </head>
+    <body class="with-custom-webkit-scrollbars with-custom-css-scrollbars" data-set-preferred-mode-onload="true">
+        <div class="page-wrapper with-navbar with-sidebar" data-sidebar-type="overlayed-sm-and-down">
+            <nav class="navbar">
+                <div class="navbar-content">
+                    <button class="btn btn-action" type="button" onclick="halfmoon.toggleSidebar()" aria-label="Toggle sidebar">
+                        <i class="fa fa-bars" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <a href="/" class="navbar-brand">
+                    {{ brand() }}
+                </a>
+                <div class="navbar-content">
+                    Header stuff goes here
+                </div>
+                <div class="navbar-content ml-auto">
+                    <button class="btn btn-action mr-5" type="button" onclick="halfmoon.toggleDarkMode()" aria-label="Toggle dark mode">
+                        <i class="fa fa-moon-o" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </nav>
+
+            <div class="sidebar-overlay" onclick="halfmoon.toggleSidebar()"></div>
+            <div class="sidebar">
+                <div class="sidebar-menu">
+                    <a href="/" class="sidebar-brand hidden-md-and-up">
+                        {{ brand() }}
+                    </a>
+
+                    {% macro sidebar_folder(folder, header) %}
+                    <h5 class="sidebar-title">{{ header }}</h5>
+                    <div class="sidebar-folder">
+                        {% for f in folder.files %}
+                            {% if not f.draft %}
+                            <a href="{{ ctx.route(f) }}" class="sidebar-link{% if file == f %} active" aria-current="page{% endif %}">
+                                {{ f.title }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                        {% for f in folder.folders %}
+                            {% if not f.no_content %}
+                                {{ sidebar_folder(f, f.title) }}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endmacro %}
+                    {{ sidebar_folder(ctx.tree, "Navigation") }}
+                </div>
+            </div>
+
+            <div class="content-wrapper with-footer">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div{% if page_summary != "" %} class="col-xl-9"{% endif %}>
+                            <!--
+                            <nav aria-label="Breadcrumbs">
+                                <ul class="breadcrumb text-center">
+                                    {% for part in ctx.crumbs(file) %}
+                                        {% if loop.last %}
+                                        <li class="breadcrumb-item active">{{ part }}</li>
+                                        {% else %}
+                                        <li class="breadcrumb-item">{{ part }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </nav>
+                            -->
+
+                            <main class="content mb-0">
+                                <h1 class="content-title">{{ file.title }}</h1>
+                                <article>
+                                    {{ content }}
+                                </article>
+                            </main>
+                        </div>
+                        {% if page_summary != "" %}
+                        <div class="col-xl-3 hidden-lg-and-down">
+                            <div class="content">
+                                <div class="summary-nav">
+                                    <div class="title">On this page</div>
+                                     {{ page_summary }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <div class="container-fluid">
+                        <div class="content">Footer stuff goes here</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
+        <script type="text/javascript">
+            halfmoonOnDOMContentLoaded()
+
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        </script>
+    </body>
+</html>

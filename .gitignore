@@ -1,0 +1,13 @@
+# IDE
+.idea/
+*.iml
+
+# Python
+.venv/
+*.py[cod]
+
+# App
+public/
+cache/
+source/
+config.json
