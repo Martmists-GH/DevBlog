@@ -1,6 +1,7 @@
 # DevBlog
 
-This is something horrible I originally made in a single day. The tool is designed to run as cron with a synced source folder.
+DevBlog is a tool I made to turn a folder of Markdown files into a blog-like thing.    
+The default theme uses halfmoon for CSS and I couldn't be bothered to customize it much.
 
 ![preview](.github/img/preview.png)
 
@@ -8,7 +9,7 @@ This is something horrible I originally made in a single day. The tool is design
 
 1. Place Markdown files in `source/`
 2. Run `python main.py`
-3. Serve the files in `public/` using your preferred tool
+3. Serve the files in `public/` using your preferred tool like nginx
 
 ## Features
 
@@ -21,7 +22,8 @@ You can mark files as drafts by including a header:
 title: My Title
 draft: true
 ---
-Incomplete stuff here
+
+This is my WIP post.
 ```
 
 ### Kotlin scripts
@@ -29,8 +31,6 @@ Incomplete stuff here
 Aside from just JS, you can write Kotlin code. By default, lets-plot-kotlin has been provided.
 
 ```markdown
-Some stuff here
-
 <script type="text/kotlin">
 // Sample snippet from the lets-plot-kotlin example notebook
 fun nextGaussian(): Double {
@@ -70,19 +70,21 @@ The tool includes Pygments to highlight code snippets.
 The entire thing* can be customized using the files in the `config/` folder.
 You can also add additional files to be copied over from `config/` to `public/`.
 
-*Pygments currently can only be set to predefined styles.
+*Pygments currently can only be set to predefined styles and a good amount of stuff is still hardcoded.
 
 ## Contributing
 
 Here's stuff you can contribute:
 
-- Community styles/layouts
+- Community styles/layouts.
 - The default template files could use some improvements.
 - Remove hardcoded stuff from generate.py where possible.
 - The readme was written at 3:45 AM as should be pretty obvious.
 - The way kotlinc-js and npx are invoked make the tool linux-only, windows support would be great.
-- Support more metadata
+- Support more metadata.
   - OpenGraph tags
   - Last modified
   - Reading time
   - more?
+- Document more stuff I forgot to.
+- Make configs backwards-compatible with any new changes.
