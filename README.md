@@ -79,7 +79,6 @@ Here's stuff you can contribute:
 - Community styles/layouts.
 - The default template files could use some improvements.
 - Remove hardcoded stuff from generate.py where possible.
-- The readme was written at 3:45 AM as should be pretty obvious.
 - The way kotlinc-js and npx are invoked make the tool linux-only, windows support would be great.
 - Support more metadata.
   - OpenGraph tags
