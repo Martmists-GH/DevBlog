@@ -6,6 +6,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import Popen, PIPE
+from tempfile import mkdtemp
 
 import jinja2
 import markdown
@@ -51,11 +52,14 @@ class Generator:
         self.page_template = jinja2.Template((config.template_dir / 'html_template.jinja').read_text())
         self.kotlin_import_template = jinja2.Template((config.template_dir / 'kotlin_import_template.jinja').read_text())
         self.kotlin_template = jinja2.Template((config.template_dir / 'kotlin_template.jinja').read_text())
+        self.temp_dir = Path(mkdtemp())
         self.valid_snippets: dict[str, str] = {}
+
+    def __del__(self):
+        shutil.rmtree(self.temp_dir)
 
     def run(self):
         print("[Main] Clearing folders")
-        shutil.rmtree(self.config.output_dir, ignore_errors=True)
         self.config.cache_dir.mkdir(parents=True, exist_ok=True)
 
         print("[Main] Downloading required KLIBs")
@@ -69,7 +73,7 @@ class Generator:
         ctx = Context(file_tree)
 
         print("[Main] Generating files recursively")
-        self.generate_files(ctx, file_tree, self.config.output_dir)
+        self.generate_files(ctx, file_tree, self.temp_dir)
 
         if self.valid_snippets:
             print("[Main] Building Master Bundle")
@@ -77,9 +81,12 @@ class Generator:
 
         print("[Main] Copying extra files")
         for (src, dest) in self.config.extra_files.items():
-            dest_path = self.config.output_dir / dest
+            dest_path = self.temp_dir / dest
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(self.config.template_dir / src, dest_path)
+
+        shutil.rmtree(self.config.output_dir, ignore_errors=True)
+        shutil.copytree(self.temp_dir, self.config.output_dir)
 
     def build_master_bundle(self):
         print("[Master Bundle] Compiling with kotlinc-js")
@@ -88,7 +95,7 @@ class Generator:
         js_content = self.kotlinc(full_kt, "bundle")
 
         print("[Master Bundle] Writing to file")
-        out_file = self.config.output_dir / 'js' / 'bundle.js'
+        out_file = self.temp_dir / 'js' / 'bundle.js'
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(js_content)
 
