@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from subprocess import Popen, PIPE
 from tempfile import mkdtemp
+from typing import Optional
 
 import jinja2
 import markdown
@@ -113,11 +114,23 @@ class Generator:
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         print(f"[Markdown - {ctx.route(file)}] Parsing nested HTML")
-        content = file.path.read_text()
-        soup = BeautifulSoup(content, 'html.parser')
+        soup = BeautifulSoup(file.path.read_text(), 'html.parser')
+        content = str(soup)
 
         for script in soup.find_all('script', {"type": "text/kotlin"}):
-            new_html = self.generate_kotlin_snippet(script.text)
+            next_sib = script.next_sibling
+            while next_sib and next_sib.text.isspace():
+                next_sib = next_sib.next_sibling
+            if next_sib and "controls" in next_sib.get("class", []):
+                snippet_html, snippet_id = self.generate_kotlin_snippet(script.text)
+                if snippet_id is None:
+                    new_html = snippet_html
+                else:
+                    controls_snippet = jinja2.Template(str(next_sib)).render(id=snippet_id)
+                    new_html = snippet_html.replace('<div class="kt-controls">', '<div class="kt-controls">' + controls_snippet)
+                    content = content.replace(str(next_sib), '', 1)
+            else:
+                new_html, _ = self.generate_kotlin_snippet(script.text)
             content = content.replace(str(script), new_html, 1)
 
         print(f"[Markdown - {ctx.route(file)}] Converting Markdown")
@@ -153,7 +166,7 @@ class Generator:
             .replace("span.linenos", ".dark-mode span.linenos")
         return style_light + "\n" + style_dark
 
-    def generate_kotlin_snippet(self, source: str) -> str:
+    def generate_kotlin_snippet(self, source: str) -> tuple[str, Optional[str]]:
         snippet_id = uuid.uuid4().hex
 
         try:
@@ -162,14 +175,18 @@ class Generator:
             self.valid_snippets[snippet_id] = source
             return f"""
 <div id="container-{snippet_id}" class="kt-container card text-left">
- <canvas id="canvas-{snippet_id}" class="d-none kt-canvas"></canvas>
- <div id="plot-{snippet_id}" class="d-none kt-plot">
-  <div id="plot-{snippet_id}-light" class="light-only"></div>
-  <div id="plot-{snippet_id}-dark" class="dark-only"></div>
+ <div class="kt-output-container">
+  <canvas id="canvas-{snippet_id}" class="d-none kt-canvas"></canvas>
+  <div id="plot-{snippet_id}" class="d-none kt-plot">
+   <div id="plot-{snippet_id}-light" class="light-only"></div>
+   <div id="plot-{snippet_id}-dark" class="dark-only"></div>
+  </div>
  </div>
- <button class="btn btn-action kt-rerun" onclick="bundle.init_{snippet_id}()" aria-label="Re-run snippet">
-  <i class="fa fa-refresh" aria-hidden="true"></i>
- </button>
+ <div class="kt-controls">
+  <button class="btn btn-action kt-rerun" onclick="bundle.init_{snippet_id}()" aria-label="Re-run snippet">
+   <i class="fa fa-refresh" aria-hidden="true"></i>
+  </button>
+ </div>
  <script type="text/javascript">bundle.init_{snippet_id}()</script>
  <details id="source-{snippet_id}" class="collapse-panel kt-source">
   <summary class="collapse-header">View Kotlin Source</summary>
@@ -180,10 +197,10 @@ class Generator:
   </div>
  </details>
 </div>
-            """
+            """, snippet_id
         except JsGenerationException as e:
             traceback.print_exception(e)
-            return f"```kotlin\n{e.message}\n```"
+            return f"```kotlin\n{e.message}\n```", None
 
     def validate_snippet(self, source: str, snippet_id: str):
         full_source = self.kotlin_template.render(content=source, id=snippet_id)
