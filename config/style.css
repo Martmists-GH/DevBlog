@@ -93,3 +93,7 @@
     background-color: var(--dm-navbar-bg-color);
     border-top: var(--navbar-border-width) solid var(--dm-navbar-border-color);
 }
+
+.linenodiv {
+    margin-left: 0.5rem;
+}
