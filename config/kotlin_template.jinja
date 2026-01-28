@@ -1,10 +1,112 @@
 fun init_{{ id }}() {
     try {
         val containerEl = document.getElementById("container-{{ id }}") as HTMLDivElement?
-        val canvasEl = document.getElementById("canvas-{{ id }}") as HTMLCanvasElement?
+        val controlsEl = document.getElementById("controls-{{ id }}") as HTMLDivElement?
+        val canvasEl = document.getElementById("canvas-{{ id }}") as HTMLDivElement?
+        val outputEl = document.getElementById("output-{{ id }}") as HTMLElement?
+        val outputWrapperEl = document.getElementById("output-wrapper-{{ id }}") as HTMLElement?
         val plotEl = document.getElementById("plot-{{ id }}") as HTMLDivElement?
         val plotLightEl = document.getElementById("plot-{{ id }}-light") as HTMLDivElement?
         val plotDarkEl = document.getElementById("plot-{{ id }}-dark") as HTMLDivElement?
+
+        fun intSlider(label: String, range: IntRange, default: Int = range.start): () -> Int {
+            val key = "input-{{ id }}-${label.replace(' ', '-')}"
+            if (!did_{{ id }}_init) {
+                val newDiv = document.createElement("div")
+                newDiv.classList.add("input-group")
+
+                newDiv.appendChild(document.createElement("div").apply {
+                    classList.add("input-group-prepend")
+                    appendChild((document.createElement("label") as HTMLLabelElement).apply {
+                        classList.add("input-group-text")
+                        innerText = label
+                    })
+                })
+
+                val valueSpan = (document.createElement("span") as HTMLSpanElement).apply {
+                    classList.add("input-group-text")
+                    innerText = "= ${default}"
+                }
+
+                val input = (document.createElement("input") as HTMLInputElement).apply {
+                    classList.add("form-control")
+                    id = key
+                    type = "range"
+                    value = default.toString()
+                    min = range.start.toString()
+                    max = range.endInclusive.toString()
+                    onmouseup= { init_{{ id }}() }
+                }
+                input.oninput = { valueSpan.innerText = "= ${input.value}" }
+
+
+                newDiv.appendChild(input)
+
+                newDiv.appendChild(document.createElement("div").apply {
+                    classList.add("input-group-append")
+                    appendChild(valueSpan)
+                })
+                controlsEl!!.appendChild(newDiv)
+            }
+
+            val el = (document.getElementById(key) as HTMLInputElement)
+            return { el.value.toInt() }
+        }
+
+        fun floatSlider(label: String, range: ClosedFloatingPointRange<Float>, default: Float = range.start): () -> Float {
+            val key = "input-{{ id }}-${label.replace(' ', '-')}"
+            if (!did_{{ id }}_init) {
+                val newDiv = document.createElement("div")
+                newDiv.classList.add("input-group")
+
+                newDiv.appendChild(document.createElement("div").apply {
+                    classList.add("input-group-prepend")
+                    appendChild((document.createElement("label") as HTMLLabelElement).apply {
+                        classList.add("input-group-text")
+                        innerText = label
+                    })
+                })
+
+                val valueSpan = (document.createElement("span") as HTMLSpanElement).apply {
+                    classList.add("input-group-text")
+                    innerText = "= ${default}"
+                }
+
+                val input = (document.createElement("input") as HTMLInputElement).apply {
+                    classList.add("form-control")
+                    id = key
+                    type = "range"
+                    value = default.toString()
+                    min = range.start.toString()
+                    max = range.endInclusive.toString()
+                    step = "any"
+                    onmouseup= { init_{{ id }}() }
+                }
+                input.oninput = { valueSpan.innerText = "= ${input.value}" }
+
+
+                newDiv.appendChild(input)
+
+                newDiv.appendChild(document.createElement("div").apply {
+                    classList.add("input-group-append")
+                    appendChild(valueSpan)
+                })
+                controlsEl!!.appendChild(newDiv)
+            }
+
+            val el = (document.getElementById(key) as HTMLInputElement)
+            return { el.value.toFloat() }
+        }
+
+        fun output(text: String, withLF: Boolean = true) {
+            if (outputEl == null || outputWrapperEl == null) return;
+            outputWrapperEl.classList.remove("d-none")
+
+            outputEl.innerText = outputEl.innerText + text
+            if (withLF) {
+                outputEl.innerText = outputEl.innerText + '\n'
+            }
+        }
 
         fun plot(
             lightTheme: OptionsMap = themeMinimal2(),
@@ -14,17 +116,43 @@ fun init_{{ id }}() {
             if (plotEl == null || plotLightEl == null || plotDarkEl == null) return
             var fig = block()
 
-            var customDiv = JsFrontendUtil.createPlotDiv(fig + lightTheme)
-            plotLightEl.innerHTML = ""
-            plotLightEl.appendChild(customDiv)
-            customDiv = JsFrontendUtil.createPlotDiv(fig + darkTheme)
-            plotDarkEl.innerHTML = ""
-            plotDarkEl.appendChild(customDiv)
+            plotLightEl.innerHTML = PlotHtmlExport.buildHtmlFromRawSpecs(
+                plotSpec = (fig + lightTheme).toSpec(),
+                scriptUrl = PlotHtmlHelper.scriptUrl(version="4.8.2"),
+                iFrame = true
+            )
+            plotDarkEl.innerHTML = PlotHtmlExport.buildHtmlFromRawSpecs(
+                plotSpec = (fig + darkTheme).toSpec(),
+                scriptUrl = PlotHtmlHelper.scriptUrl(version="4.8.2"),
+                iFrame = true
+            )
 
             plotEl.classList.remove("d-none")
         }
+
+        fun canvas(data: ImageData) {
+            if (canvasEl == null) return
+            val canvas = document.createElement("canvas") as HTMLCanvasElement
+            canvas.width = data.width
+            canvas.height = data.height
+            val ctx = canvas.getContext("2d") as CanvasRenderingContext2D
+            ctx.putImageData(data, 0.0, 0.0)
+            canvasEl.appendChild(canvas)
+        }
+
+        if (outputEl != null) {
+            outputEl.innerText = ""
+        }
+        if (canvasEl != null) {
+            canvasEl.innerHTML = ""
+        }
+
         {{ content }}
     } catch (e: Throwable) {
         console.error("Error in snippet {{ id }}:", e)
     }
+
+    did_{{ id }}_init = true
 }
+
+var did_{{ id }}_init = false

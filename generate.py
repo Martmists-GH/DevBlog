@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 import traceback
@@ -11,12 +12,12 @@ from typing import Optional
 
 import jinja2
 import markdown
-import requests
 from bs4 import BeautifulSoup
 from pygments.formatters import HtmlFormatter
 
 from config import Config
 from data import FolderEntry, FileEntry
+from dependency_downloader import DependencyDownloader, LibInfo
 
 
 @dataclass
@@ -101,6 +102,8 @@ class Generator:
         out_file.write_text(js_content)
 
     def generate_files(self, ctx: Context, folder: FolderEntry, output_dir: Path):
+        output_dir.mkdir(exist_ok=True)
+
         for a in folder.assets:
             shutil.copyfile(a, output_dir / a.name)
         for f in folder.files:
@@ -176,17 +179,17 @@ class Generator:
             return f"""
 <div id="container-{snippet_id}" class="kt-container card text-left">
  <div class="kt-output-container">
-  <canvas id="canvas-{snippet_id}" class="d-none kt-canvas"></canvas>
+  <div id="canvas-{snippet_id}" class="d-none kt-canvas"></div>
   <div id="plot-{snippet_id}" class="d-none kt-plot">
    <div id="plot-{snippet_id}-light" class="light-only"></div>
    <div id="plot-{snippet_id}-dark" class="dark-only"></div>
   </div>
+  <pre id="output-wrapper-{snippet_id}" class="kt-log d-none code m-5"><code id="output-{snippet_id}"></code></pre>
  </div>
- <div class="kt-controls">
-  <button class="btn btn-action kt-rerun" onclick="bundle.init_{snippet_id}()" aria-label="Re-run snippet">
-   <i class="fa fa-refresh" aria-hidden="true"></i>
-  </button>
- </div>
+ <div id="controls-{snippet_id}" class="kt-controls mb-10"></div>
+ <button class="btn btn-action kt-rerun" onclick="bundle.init_{snippet_id}()" aria-label="Re-run snippet">
+  <i class="fa fa-refresh" aria-hidden="true"></i>
+ </button>
  <script type="text/javascript">bundle.init_{snippet_id}()</script>
  <details id="source-{snippet_id}" class="collapse-panel kt-source">
   <summary class="collapse-header">View Kotlin Source</summary>
@@ -244,7 +247,7 @@ class Generator:
             process = Popen(
                 [
                     'kotlinc-js',
-                    '-libraries', ':'.join(str((self.config.cache_dir / k).absolute()) for (k, _) in self.config.kotlin_settings.klibs),
+                    '-libraries', ':'.join(str(klib.absolute()) for klib in self.config.cache_dir.glob('*.klib')),
                     '-ir-output-dir', str(work_path / 'out' / 'klib'),
                     '-ir-output-name', module,
                     '-Xir-produce-klib-file',
@@ -265,7 +268,7 @@ class Generator:
             process = Popen(
                 [
                     'kotlinc-js',
-                    '-libraries', ':'.join(str((self.config.cache_dir / k).absolute()) for (k, _) in self.config.kotlin_settings.klibs),
+                    '-libraries', ':'.join(str(klib.absolute()) for klib in self.config.cache_dir.glob('*.klib')),
                     '-ir-output-dir', str(work_path / 'out' / 'js'),
                     '-ir-output-name', module,
                     '-Xir-produce-js',
@@ -335,14 +338,16 @@ class Generator:
             return str(soup), ""
 
     def prepare_klibs(self):
-        for (lib, url) in self.config.kotlin_settings.klibs:
-            file = self.config.cache_dir / lib
-            if not file.exists():
-                print(f"[KLIB] Downloading {lib}")
-                file.parent.mkdir(parents=True, exist_ok=True)
-                res = requests.get(url)
-                res.raise_for_status()
-                file.write_bytes(res.content)
+        kc_version_proc = Popen(["kotlinc-js", "-version"], stderr=PIPE)
+        _, stderr = kc_version_proc.communicate()
+        output = stderr.decode()
+        match = re.search(r"kotlinc-js ([\d.]+)", output)
+        kver = match.group(1)
+        downloader = DependencyDownloader(
+            self.config.cache_dir,
+            [f"org.jetbrains.kotlin:kotlin-stdlib-js:{kver}"] + self.config.kotlin_settings.klibs
+        )
+        downloader.run()
 
     def prepare_npm(self):
         shutil.copyfile(self.config.template_dir / "package.json", self.config.cache_dir / "package.json")
