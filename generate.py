@@ -215,7 +215,7 @@ class Generator:
             'attr_list',
             'codehilite',
             'fenced_code',
-            'markdown-mermaidjs',
+            'markdown_mermaidjs',
             'md_in_html',
             'mdx_math',
             'meta',
