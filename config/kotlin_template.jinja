@@ -74,20 +74,20 @@ fun init_{{ id }}() {
 
                 val valueSpan = (document.createElement("span") as HTMLSpanElement).apply {
                     classList.add("input-group-text")
-                    innerText = "= ${default}"
+                    innerText = "= ${default.roundTo(4)}"
                 }
 
                 val input = (document.createElement("input") as HTMLInputElement).apply {
                     classList.add("form-control")
                     id = key
                     type = "range"
-                    value = default.toString()
+                    step = "any"
                     min = range.start.toString()
                     max = range.endInclusive.toString()
-                    step = "any"
+                    value = default.toString()
                     onmouseup= { init_{{ id }}() }
                 }
-                input.oninput = { valueSpan.innerText = "= ${input.value}" }
+                input.oninput = { valueSpan.innerText = "= ${input.value.toFloat().roundTo(4)}" }
 
                 newDiv.appendChild(input)
 
@@ -120,7 +120,7 @@ fun init_{{ id }}() {
                 newDiv.appendChild(input)
                 newDiv.appendChild((document.createElement("label") as HTMLLabelElement).apply {
                     htmlFor = key
-                    innerText = "Select Image"
+                    innerText = "Select $label"
                 })
                 val canvas = (document.createElement("canvas") as HTMLCanvasElement).apply {
                     classList.add("input-canvas")

@@ -13,3 +13,12 @@ import org.jetbrains.letsPlot.frontend.JsFrontendUtil
 import org.jetbrains.letsPlot.core.util.*
 
 {{ content }}
+
+fun Float.roundTo(digits: Int): String {
+    val whole = truncate(this)
+    val prefix = whole.toString()
+    if (prefix.length >= digits) return prefix
+    val exp = 10.0.pow(digits - prefix.length)
+    val r = this * exp
+    return (round(r) / exp).toString()
+}

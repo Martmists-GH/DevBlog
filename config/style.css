@@ -97,3 +97,30 @@
 .linenodiv {
     margin-left: 0.5rem;
 }
+
+.kt-canvas-display {
+    margin: 1rem;
+    display: block;
+    max-width: 45rem;
+}
+
+.input-canvas.kt-canvas-display {
+    display: block;
+    max-width: initial;
+    max-height: 6rem;
+    margin-left: 1rem;
+    margin-top: 0;
+}
+
+.kt-image-input-container {
+    display: flex;
+}
+
+.card {
+    margin: 1rem;
+    padding: 1rem;
+}
+
+.input-group-append .input-group-text {
+    width: 7rem;
+}
