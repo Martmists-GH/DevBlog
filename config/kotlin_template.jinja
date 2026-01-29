@@ -19,6 +19,7 @@ fun init_{{ id }}() {
                     classList.add("input-group-prepend")
                     appendChild((document.createElement("label") as HTMLLabelElement).apply {
                         classList.add("input-group-text")
+                        htmlFor = key
                         innerText = label
                     })
                 })
@@ -46,7 +47,10 @@ fun init_{{ id }}() {
                     classList.add("input-group-append")
                     appendChild(valueSpan)
                 })
-                controlsEl!!.appendChild(newDiv)
+                controlsEl!!.appendChild(document.createElement("div").apply {
+                    classList.add("form-group")
+                    appendChild(newDiv)
+                })
             }
 
             val el = (document.getElementById(key) as HTMLInputElement)
@@ -64,6 +68,7 @@ fun init_{{ id }}() {
                     appendChild((document.createElement("label") as HTMLLabelElement).apply {
                         classList.add("input-group-text")
                         innerText = label
+                        htmlFor = key
                     })
                 })
 
@@ -84,18 +89,93 @@ fun init_{{ id }}() {
                 }
                 input.oninput = { valueSpan.innerText = "= ${input.value}" }
 
-
                 newDiv.appendChild(input)
 
                 newDiv.appendChild(document.createElement("div").apply {
                     classList.add("input-group-append")
                     appendChild(valueSpan)
                 })
-                controlsEl!!.appendChild(newDiv)
+                controlsEl!!.appendChild(document.createElement("div").apply {
+                    classList.add("form-group")
+                    appendChild(newDiv)
+                })
             }
 
             val el = (document.getElementById(key) as HTMLInputElement)
             return { el.value.toFloat() }
+        }
+
+        fun imageInput(label: String, default: String? = null /* URL to image */): () -> ImageData {
+            val key = "input-{{ id }}-${label.replace(' ', '-')}"
+            val canvasKey = "input-canvas-{{ id }}-${label.replace(' ', '-')}"
+            if (!did_{{ id }}_init) {
+                val newDiv = document.createElement("div") as HTMLDivElement
+                newDiv.classList.add("custom-file")
+
+                val input = (document.createElement("input") as HTMLInputElement).apply {
+                    type = "file"
+                    id = key
+                    accept=".jpg,.jpeg,.png,.webp"
+                }
+                newDiv.appendChild(input)
+                newDiv.appendChild((document.createElement("label") as HTMLLabelElement).apply {
+                    htmlFor = key
+                    innerText = "Select Image"
+                })
+                val canvas = (document.createElement("canvas") as HTMLCanvasElement).apply {
+                    classList.add("input-canvas")
+                    classList.add("kt-canvas-display")
+                    id = canvasKey
+                    width = 1
+                    height = 1
+                }
+
+                fun updateCanvas(source: String) {
+                    val img = Image()
+                    img.onload = {
+                        val ctx = canvas.getContext("2d") as CanvasRenderingContext2D
+                        canvas.width = img.width
+                        canvas.height = img.height
+                        ctx.drawImage(img, 0.0, 0.0)
+                        init_{{ id }}()
+                    }
+                    img.src = source
+                }
+
+                input.addEventListener("change", {
+                    val file = input.files?.item(0)
+                    if (file != null) {
+                        val url = URL.createObjectURL(file)
+                        updateCanvas(url)
+                    } else {
+                        if (default != null) {
+                            updateCanvas(default)
+                        } else {
+                            val ctx = canvas.getContext("2d") as CanvasRenderingContext2D
+                            canvas.width = 1
+                            canvas.height = 1
+                            ctx.clearRect(0.0, 0.0, 1.0, 1.0)
+                        }
+                    }
+                })
+
+                if (default != null) {
+                    updateCanvas(default)
+                }
+
+                controlsEl!!.appendChild((document.createElement("div") as HTMLDivElement).apply {
+                    classList.add("form-group")
+                    classList.add("kt-image-input-container")
+                    appendChild(newDiv)
+                    appendChild(canvas)
+                })
+            }
+
+            val el = (document.getElementById(canvasKey) as HTMLCanvasElement)
+            return {
+                val ctx = el.getContext("2d") as CanvasRenderingContext2D
+                ctx.getImageData(0.0, 0.0, el.width.toDouble(), el.height.toDouble())
+            }
         }
 
         fun output(text: String, withLF: Boolean = true) {
@@ -132,7 +212,10 @@ fun init_{{ id }}() {
 
         fun canvas(data: ImageData) {
             if (canvasEl == null) return
+            canvasEl.classList.remove("d-none")
+
             val canvas = document.createElement("canvas") as HTMLCanvasElement
+            canvas.classList.add("kt-canvas-display")
             canvas.width = data.width
             canvas.height = data.height
             val ctx = canvas.getContext("2d") as CanvasRenderingContext2D

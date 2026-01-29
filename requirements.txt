@@ -4,5 +4,6 @@ frontmatter
 jinja2
 lxml
 markdown
+markdown-mermaidjs
 Pygments
 python-markdown-math

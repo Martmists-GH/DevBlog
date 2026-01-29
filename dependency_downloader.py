@@ -84,11 +84,9 @@ class DependencyDownloader:
                 with open(out_file, "wb") as f:
                     f.write(data)
 
-            print(f"Searching dependencies for {lib.filename}")
             async with session.get(lib.pom_url) as resp:
                 resp.raise_for_status()
                 xml = await resp.text()
 
         libs = await loop.run_in_executor(None, self.collect_deps, xml)
-        print(f"Found {len(libs)} dependencies for {lib.filename}")
         await self.download_all(libs)

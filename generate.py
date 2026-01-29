@@ -186,7 +186,7 @@ class Generator:
   </div>
   <pre id="output-wrapper-{snippet_id}" class="kt-log d-none code m-5"><code id="output-{snippet_id}"></code></pre>
  </div>
- <div id="controls-{snippet_id}" class="kt-controls mb-10"></div>
+ <div id="controls-{snippet_id}" class="kt-controls form-group mb-10"></div>
  <button class="btn btn-action kt-rerun" onclick="bundle.init_{snippet_id}()" aria-label="Re-run snippet">
   <i class="fa fa-refresh" aria-hidden="true"></i>
  </button>
@@ -212,13 +212,14 @@ class Generator:
 
     def render_markdown(self, source: str) -> str:
         extensions = [
-            'fenced_code',
-            'codehilite',
-            'tables',
             'attr_list',
+            'codehilite',
+            'fenced_code',
+            'markdown-mermaidjs',
             'md_in_html',
             'mdx_math',
             'meta',
+            'tables',
         ]
         extension_configs = {
             'codehilite': {
