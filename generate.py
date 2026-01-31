@@ -344,9 +344,11 @@ class Generator:
         output = stderr.decode()
         match = re.search(r"kotlinc-js ([\d.]+)", output)
         kver = match.group(1)
+        is_wasm = "-Xwasm" in self.config.kotlin_settings.kotlinc_args
         downloader = DependencyDownloader(
             self.config.cache_dir,
-            [f"org.jetbrains.kotlin:kotlin-stdlib-js:{kver}"] + self.config.kotlin_settings.klibs
+            [f"org.jetbrains.kotlin:kotlin-stdlib-{'wasm-js' if is_wasm else 'js'}:{kver}"] + self.config.kotlin_settings.klibs,
+            is_wasm,
         )
         downloader.run()
 

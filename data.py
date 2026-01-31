@@ -50,7 +50,9 @@ class FolderEntry:
         files: list[FileEntry] = []
         assets: list[Path] = []
         for e in path.iterdir():
-            if e.is_dir() and not e.name.startswith("."):
+            if e.name.startswith("."):
+                continue
+            if e.is_dir():
                 folders.append(FolderEntry.parse(e))
             elif e.suffix == ".md":
                 files.append(FileEntry.parse(e))

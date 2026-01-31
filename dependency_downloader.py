@@ -37,10 +37,11 @@ loop = asyncio.new_event_loop()
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 class DependencyDownloader:
-    def __init__(self, cache_dir: Path, libs: list[str]):
+    def __init__(self, cache_dir: Path, libs: list[str], is_wasm: bool):
         self.cache_dir = cache_dir
         self.collected: set[str] = set()
         self.libs = libs
+        self.is_wasm = is_wasm
 
     def run(self):
         loop.run_until_complete(self.download_all(self.libs))
@@ -58,15 +59,16 @@ class DependencyDownloader:
 
         await asyncio.gather(*tasks)
 
-    @staticmethod
-    def collect_deps(xml: str) -> list[str]:
+    def collect_deps(self, xml: str) -> list[str]:
         soup = BeautifulSoup(xml, 'lxml')
         found = []
         for dep in soup.find_all("dependency"):
             group = dep.find('groupid')
             artifact = dep.find('artifactid')
             version = dep.find('version')
-            if not artifact.text.endswith("-js"):
+            if not self.is_wasm and not artifact.text.endswith("-js"):
+                continue
+            if self.is_wasm and not artifact.text.endswith("-wasm-js"):
                 continue
             if group and artifact and version:
                 found.append(f"{group.text}:{artifact.text}:{version.text}")
