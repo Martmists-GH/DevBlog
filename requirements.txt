@@ -7,3 +7,4 @@ markdown
 markdown-mermaidjs
 Pygments
 python-markdown-math
+minify_html

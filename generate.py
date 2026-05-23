@@ -12,6 +12,7 @@ from typing import Optional
 
 import jinja2
 import markdown
+import minify_html
 from bs4 import BeautifulSoup
 from pygments.formatters import HtmlFormatter
 
@@ -80,6 +81,7 @@ class Generator:
         if self.valid_snippets:
             print("[Main] Building Master Bundle")
             self.build_master_bundle()
+            self.minify_master_bundle()
 
         print("[Main] Copying extra files")
         for (src, dest) in self.config.extra_files.items():
@@ -100,6 +102,13 @@ class Generator:
         out_file = self.temp_dir / 'js' / 'bundle.js'
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(js_content)
+
+    def minify_master_bundle(self):
+        print("[Master Bundle] Minifying with terser")
+        bundle_file = self.temp_dir / 'js' / 'bundle.js'
+        js_content = bundle_file.read_text()
+        minified_content = self.terser(js_content)
+        bundle_file.write_text(minified_content)
 
     def generate_files(self, ctx: Context, folder: FolderEntry, output_dir: Path):
         output_dir.mkdir(exist_ok=True)
@@ -124,16 +133,7 @@ class Generator:
             next_sib = script.next_sibling
             while next_sib and next_sib.text.isspace():
                 next_sib = next_sib.next_sibling
-            if next_sib and "controls" in next_sib.get("class", []):
-                snippet_html, snippet_id = self.generate_kotlin_snippet(script.text)
-                if snippet_id is None:
-                    new_html = snippet_html
-                else:
-                    controls_snippet = jinja2.Template(str(next_sib)).render(id=snippet_id)
-                    new_html = snippet_html.replace('<div class="kt-controls">', '<div class="kt-controls">' + controls_snippet)
-                    content = content.replace(str(next_sib), '', 1)
-            else:
-                new_html, _ = self.generate_kotlin_snippet(script.text)
+            new_html, _ = self.generate_kotlin_snippet(script.text)
             content = content.replace(str(script), new_html, 1)
 
         print(f"[Markdown - {ctx.route(file)}] Converting Markdown")
@@ -152,14 +152,28 @@ class Generator:
             ))
             return
 
-        print(f"[Markdown - {ctx.route(file)}] Writing to file")
-        output_file.write_text(self.page_template.render(
+        print(f"[Markdown - {ctx.route(file)} Rendering template")
+        rendered = self.page_template.render(
             ctx=ctx,
             file=file,
             content=html_processed,
             page_summary=summary,
             syntax_css=self.pygments_css_style()
-        ))
+        )
+
+        print(f"[Markdown - {ctx.route(file)} Minifying HTML")
+        minified = minify_html.minify(
+            rendered,
+            allow_optimal_entities=True,
+            allow_removing_spaces_between_attributes=True,
+            keep_html_and_head_opening_tags=True,
+            minify_css=True,
+            minify_js=True,
+            remove_processing_instructions=True
+        )
+
+        print(f"[Markdown - {ctx.route(file)}] Writing to file")
+        output_file.write_text(minified)
 
     def pygments_css_style(self) -> str:
         style_light = HtmlFormatter(style=self.config.render_settings.pygments_style).get_style_defs('.highlight')
@@ -312,6 +326,35 @@ class Generator:
 
             return bundled_js_path.read_text()
 
+    def terser(self, source: str) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            work_path = Path(d)
+            in_file = work_path / 'file.js'
+            out_file = work_path / 'file.min.js'
+            in_file.write_text(source)
+
+            node_path = self.config.cache_dir / "node_modules"
+            env = os.environ.copy()
+            env["NODE_PATH"] = str(node_path.absolute())
+
+            minify_process = Popen(
+                [
+                    'npx', 'terser',
+                    str(in_file),
+                    '-o', str(out_file),
+                    '-c',
+                    '-m'
+                ],
+                cwd=str(self.config.cache_dir),
+                env=env,
+                stdout=PIPE, stderr=PIPE
+            )
+            stdout, stderr = minify_process.communicate()
+            if minify_process.returncode != 0:
+                raise Exception("Terser failed", stderr.decode())
+
+            return out_file.read_text()
+
     def postprocess_html(self, html: str) -> tuple[str, str]:
         soup = BeautifulSoup(html, "html.parser")
         for tag in soup.find_all("img"):
@@ -325,13 +368,12 @@ class Generator:
             else:
                 tag["class"] = list(tag.get("class", [])) + ["table", "table-striped", "table-hover"]
         headers = []
-        for h in ("h1", "h2", "h3", "h4", "h5", "h6"):
-            for tag in soup.find_all(h):
-                tag["class"] = list(tag.get("class", [])) + ["content-title"]
-                tag_id = tag.text.replace(' ', '-')
-                headers.append(f'<a href="#{tag_id}">{tag.text}</a>')
-                tag["id"] = tag_id
-                tag.append(BeautifulSoup(f' <a href="#{tag_id}" class="ml-5 text-decoration-none">#</a>', "html.parser"))
+        for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+            tag["class"] = list(tag.get("class", [])) + ["content-title"]
+            tag_id = tag.text.replace(' ', '-')
+            headers.append(f'<a href="#{tag_id}">{tag.text}</a>')
+            tag["id"] = tag_id
+            tag.append(BeautifulSoup(f' <a href="#{tag_id}" class="ml-5 text-decoration-none">#</a>', "html.parser"))
 
         if headers:
             return str(soup), "\n".join(headers)

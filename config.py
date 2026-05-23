@@ -63,9 +63,9 @@ class Config:
             ),
             kotlin_settings=KotlinConfig(
                 klibs=[
-                    "org.jetbrains.kotlin-wrappers:kotlin-browser-js:2026.1.11",
+                    "org.jetbrains.kotlin-wrappers:kotlin-browser-js:2026.5.3",
                     "org.jetbrains.kotlin:kotlin-dom-api-compat:2.3.0",
-                    "org.jetbrains.lets-plot:lets-plot-kotlin-js:4.12.1",
+                    "org.jetbrains.lets-plot:lets-plot-kotlin-js:4.13.0",
                 ],
                 kotlinc_args=[
                     '-Xir-dce',
